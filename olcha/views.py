@@ -84,7 +84,7 @@ class ProductListApiView(APIView):
  
  
  
-    
+# HOMEWORK    
 #Category CRUD
 
 class CategoryList(generics.ListAPIView):
