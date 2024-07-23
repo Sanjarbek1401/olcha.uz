@@ -1,19 +1,28 @@
 from django.shortcuts import render,get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import Category,Group
-from .serializers import CategoryModelSerializer,GroupSerializer
+from .models import Category,Group,Image,Product
+from .serializers import CategoryModelSerializer,GroupModelSerializer,ImageSerializer,ProductSerializer
 from django.http import JsonResponse
-from rest_framework import status
+from rest_framework import status,viewsets
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import generics
+from rest_framework.generics import (
+    DestroyAPIView,
+    UpdateAPIView,
+    CreateAPIView,
+    ListAPIView,
+    RetrieveAPIView,
+)
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+
 
 #For Category
 
 class CategoryListView(APIView):
     def get(self, request):
         categories = Category.objects.all()
-        serializers = CategoryModelSerializer(categories, many=True)
+        serializers = CategoryModelSerializer(categories, many=True, context = {'request':request})
         return Response(serializers.data, status=status.HTTP_200_OK)
 
     def post(self, request):
@@ -23,7 +32,7 @@ class CategoryListView(APIView):
             return Response(serializers.data, status=status.HTTP_201_CREATED)
         return Response(serializers.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class CategoryDetailView(APIView):
+""" class CategoryDetailView(APIView):
     def get_object(self, slug):
         try:
             return Category.objects.get(slug=slug)
@@ -48,10 +57,117 @@ class CategoryDetailView(APIView):
         category = self.get_object(slug=slug)
         category.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
+ """
 #For Group
 
-class GroupListView(APIView):
+class GroupListApiView(APIView):
+    def get(self, request):
+        groups = Group.objects.all()
+        serializers = GroupModelSerializer(groups, many=True)
+        return Response(serializers.data, status=status.HTTP_200_OK)
+    
+#For image
+
+class ImageListApiView(APIView):
+    def get (self,request):
+        images = Image.objects.all()
+        serializers =ImageSerializer(images, many = True, context = {'request':request})
+        return Response (serializers.data, status=status.HTTP_200_OK)
+    
+#For Product
+
+class ProductListApiView(APIView):
+    def get(self,request):
+        products = Product.objects.all()
+        serializers = ProductSerializer(products,many=True,context = {'request':request})
+        return Response (serializers.data,status=status.HTTP_200_OK)
+ 
+ 
+ 
+    
+#Category CRUD
+
+class CategoryList(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    model = Category
+    serializer_class = CategoryModelSerializer
+
+    # queryset = Category.objects.all()
+    def get_queryset(self):
+        queryset = Category.objects.all()
+        return queryset
+    
+class CategoryDetail(generics.RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+    model = Category
+    serializer_class = CategoryModelSerializer
+    lookup_field = 'pk'
+
+    queryset = Category.objects.all()
+    
+class CategoryAdd(generics.CreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CategoryModelSerializer
+    queryset = Category.objects.all()
+
+class CategoryChange(generics.UpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CategoryModelSerializer
+    queryset = Category.objects.all()
+    lookup_field = 'pk'
+
+class CategoryDelete(generics.DestroyAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CategoryModelSerializer
+    queryset = Category.objects.all()
+    lookup_field = 'pk'
+    
+# ModelViewSet
+
+class CategoryModelViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategoryModelSerializer
+    lookup_field = 'pk'
+
+
+# Product CRUD(generic)
+
+
+class ProductListView(ListAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+class ProductCreateView(CreateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+class ProductDetailView(RetrieveAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+class ProductUpdateView(UpdateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    
+class ProductDeleteView(DestroyAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    
+    
+    
+    
+    
+""" class GroupListView(APIView):
     def get(self,request):
         groups = Group.objects.all()
         serializer = GroupSerializer(groups, many = True)
@@ -99,3 +215,4 @@ class GroupDetailView(APIView):
     
  
 
+ """

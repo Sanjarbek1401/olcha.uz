@@ -1,24 +1,139 @@
 from rest_framework import serializers
-from .models import Category,Group
-
-class CategoryModelSerializer(serializers.ModelSerializer):
+from .models import Category,Group,Image,Product,Comment,ProductAttribute
+from django.db.models.functions import Round
+from django.db.models import Avg
+#For Image
+class ImageSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Category
-        fields = '__all__'
+        model = Image
+        fields = ['id', 'image', 'is_primary','product','group','category']
         
-        
+#For Group
+class GroupModelSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
 
-
-class GroupSerializer(serializers.ModelSerializer):
-    category = CategoryModelSerializer(read_only=True)  # Use CategoryModelSerializer here
-    #category = serializers.PrimaryKeyRelatedField(queryset = Category.objects.all())
     class Meta:
         model = Group
-        fields = ['id', 'group_name', 'slug', 'category']
+        fields = ['id','slug',   'group_name', 'image']
+
+    def get_image(self, instance):
+        image = Image.objects.filter(group=instance, is_primary=True).first()
+        request = self.context.get('request')
+        if image:
+            image_url = image.image.url
+            return request.build_absolute_uri(image_url)
+        return None
+
+#For Category
+class CategoryModelSerializer(serializers.ModelSerializer):
+    
+    # images = ImageSerializer(many=True, read_only=True,source='category_images')
+    category_image = serializers.SerializerMethodField(method_name='get_images')
+    groups = GroupModelSerializer(many=True,read_only = True)
+    
+    def get_images(self, instance):
+        image = Image.objects.filter(category=instance, is_primary=True).first()
+        request = self.context.get('request')
+        if image:
+            image_url = image.image.url
+            return request.build_absolute_uri(image_url)     
+        return None
+
+    class Meta:
+        model = Category
+        fields = ['id', 'category_name', 'slug', 'category_image','groups']
+        
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        exclude = ()
+    
+#For Product        
+class ProductSerializer(serializers.ModelSerializer):
+    group = GroupModelSerializer(many=False,read_only=True)
+    #group_name = serializers.CharField(source = 'group.group_name', read_only = True)
+    category_name = serializers.CharField(source = 'group.category.category_name', read_only = True)
+    category_slug  = serializers.SlugField(source = 'group.category.slug')  
+    primary_images = serializers.SerializerMethodField()
+    all_images = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
+    #comments = CommentSerializer(many=True,read_only = True)
+    comments_count = serializers.SerializerMethodField()
+    avg_rating = serializers.SerializerMethodField()
+    attributes = serializers.SerializerMethodField()
+    
+    def get_attributes(self,instance):
+        attributes = ProductAttribute.objects.filter(product = instance).values_list('key_id','key__attribute_name',
+                                                                                     'value_id','value__attribute_value')
+        characters = [
+            {
+            'attribute_id':key_id,
+            'attribute_name':key_name,
+            'attribute_value_id':value_id,
+            'attribute_value':value_name
+            }
+            for key_id,key_name,value_id,value_name in attributes
+        ]
+        return characters
+    # simple version to take avarage rating
+    """ def get_avg_rating(self,instance):
+        comments = Comment.objects.filter(product = instance)
+        try:
+            avg_rating = round(sum([comment.rating for comment in comments]) / comments.count())
+        except ZeroDivisionError:
+            avg_rating = 0
+        return avg_rating  """ 
+        
+    #django annotate and aggregate version to take avarage rating 
+    def get_avg_rating(self,instance):
+        avg_rating = Comment.objects.filter(product=instance).aggregate(avg_rating=Round(Avg('rating')))
+        if avg_rating.get('avg_rating'):
+            return avg_rating.get('avg_rating')
+        return 0
+    
+    def get_comments_count(self,instance):
+        count = Comment.objects.filter().count()
+        return count 
+    
+    
+    def get_is_liked(self,instance):
+        user = self.context.get('request').user
+        if not user.is_authenticated:
+            return False
+        all_likes = instance.users_like.all()
+        if user in all_likes:
+            return True
+        return False
+        
         
     
-    def create(self, validated_data):
-        category_data = validated_data.pop('category')
-        category, created = Category.objects.get_or_create(**category_data) 
-        group = Group.objects.create(category=category, **validated_data)
-        return group    
+    def get_all_images(self,instance):
+        images = Image.objects.all().filter(product=instance)
+        all_images = []
+        request = self.context.get('request')
+        for image in images:
+            all_images.append(request.build_absolute_uri(image.image.url))
+        return all_images
+        
+    
+    def get_primary_images(self,instance):
+        image = Image.objects.filter(product=instance, is_primary = True).first()
+        request = self.context.get('request')
+        if image:
+            image_url = image.image.url
+            return request.build_absolute_uri(image_url)
+     
+    class Meta:
+        model = Product
+        exclude = ('users_like',)
+        extra_fields = ['group','category_name','category_slug','primary_images','all_images','is_liked']
+
+        
+        
+
+
+
+        
+    
+      
+    
