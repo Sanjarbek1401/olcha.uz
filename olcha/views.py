@@ -89,7 +89,7 @@ class ProductListApiView(APIView):
  
  
  
-    
+# HOMEWORK    
 #Category CRUD
 
 class CategoryList(generics.ListAPIView):
@@ -244,6 +244,7 @@ class GroupDetailView(APIView):
  
 
  """
+<<<<<<< HEAD
 # Login,registr, logout 
 class RegisterAPI(generics.GenericAPIView):
     serializer_class = RegisterSerializer
@@ -283,3 +284,5 @@ class LogoutView(generics.GenericAPIView):
        def post(self, request, *args, **kwargs):
            request.auth.delete()  
            return Response({'message': 'Successfully logged out.'}, status=status.HTTP_200_OK)
+=======
+>>>>>>> 5eca925e7df358083036ad396d306ccd2ca0f28e
