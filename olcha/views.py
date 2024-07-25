@@ -2,7 +2,7 @@ from django.shortcuts import render,get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Category,Group,Image,Product
-from .serializers import CategoryModelSerializer,GroupModelSerializer,ImageSerializer,ProductSerializer
+from .serializers import CategoryModelSerializer,GroupModelSerializer,ImageSerializer,ProductSerializer,UserSerializer,RegisterSerializer,LoginSerializer,LogoutSerializer
 from django.http import JsonResponse
 from rest_framework import status,viewsets
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -15,6 +15,11 @@ from rest_framework.generics import (
     RetrieveAPIView,
 )
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from knox.models import AuthToken
+
 
 
 #For Category
@@ -133,35 +138,58 @@ class CategoryModelViewSet(viewsets.ModelViewSet):
 # Product CRUD(generic)
 
 
-class ProductListView(ListAPIView):
+class ProductList(generics.ListAPIView):
     queryset = Product.objects.all()
+    model = Product
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
 
-class ProductCreateView(CreateAPIView):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
 
-class ProductDetailView(RetrieveAPIView):
+class ProductListGeneric(generics.ListCreateAPIView):
     queryset = Product.objects.all()
+    model = Product
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
 
-class ProductUpdateView(UpdateAPIView):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
-    
-class ProductDeleteView(DestroyAPIView):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
 
-class ProductViewSet(viewsets.ModelViewSet):
+class ProductDetail(generics.RetrieveAPIView):
+    model = Product
+    serializer_class = ProductSerializer
+    queryset = Product.objects.all()
+    lookup_field = 'pk'
+
+
+class ProductDetailUpdate(generics.RetrieveUpdateAPIView):
+    model = Product
+    serializer_class = ProductSerializer
+    queryset = Product.objects.all()
+    lookup_field = 'pk'
+
+
+class ProductDetailDelete(generics.RetrieveDestroyAPIView):
+    model = Product
+    serializer_class = ProductSerializer
+    queryset = Product.objects.all()
+    lookup_field = 'pk'
+
+
+""" class ProductUpdate(generics.UpdateAPIView):
+    model = Product
+    serializer_class = ProductSerializer
+    queryset = Product.objects.all()
+    lookup_field = 'pk'
+
+
+class ProductDelete(generics.DestroyAPIView):
+    model = Product
+    serializer_class = ProductSerializer
+    queryset = Product.objects.all()
+    lookup_field = 'pk' """
+
+
+class ProductModelViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    lookup_field = 'pk'
     
     
     
@@ -216,3 +244,42 @@ class GroupDetailView(APIView):
  
 
  """
+# Login,registr, logout 
+class RegisterAPI(generics.GenericAPIView):
+    serializer_class = RegisterSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response({
+            "user": UserSerializer(user, context=self.get_serializer_context()).data,
+            "token": AuthToken.objects.create(user)[1]
+        })
+
+class LoginView(generics.GenericAPIView):
+       serializer_class = LoginSerializer
+
+       def post(self, request, *args, **kwargs):
+           serializer = self.get_serializer(data=request.data)
+           serializer.is_valid(raise_exception=True)
+           user = self.authenticate_user(serializer.validated_data)
+           if user:
+               return Response({'message': 'Login successful!', 'user_id': user.id}, status=status.HTTP_200_OK)
+           return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+       def authenticate_user(self, validated_data):
+           username = validated_data.get('username')
+           password = validated_data.get('password')
+           from django.contrib.auth import authenticate
+           return authenticate(username=username, password=password)
+   
+
+
+class LogoutView(generics.GenericAPIView):
+       serializer_class = LogoutSerializer
+       permission_classes = [IsAuthenticated]  
+
+       def post(self, request, *args, **kwargs):
+           request.auth.delete()  
+           return Response({'message': 'Successfully logged out.'}, status=status.HTTP_200_OK)

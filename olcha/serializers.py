@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Category,Group,Image,Product,Comment,ProductAttribute
 from django.db.models.functions import Round
 from django.db.models import Avg
+from django.contrib.auth.models import User
 #For Image
 class ImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -50,10 +51,10 @@ class CommentSerializer(serializers.ModelSerializer):
     
 #For Product        
 class ProductSerializer(serializers.ModelSerializer):
-    group = GroupModelSerializer(many=False,read_only=True)
-    #group_name = serializers.CharField(source = 'group.group_name', read_only = True)
+    # group = GroupModelSerializer(many=False)
+    # group_name = serializers.CharField(source = 'group.group_name')
     category_name = serializers.CharField(source = 'group.category.category_name', read_only = True)
-    category_slug  = serializers.SlugField(source = 'group.category.slug')  
+    category_slug  = serializers.SlugField(source = 'group.category.slug',read_only =True)  
     primary_images = serializers.SerializerMethodField()
     all_images = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
@@ -128,9 +129,49 @@ class ProductSerializer(serializers.ModelSerializer):
         exclude = ('users_like',)
         extra_fields = ['group','category_name','category_slug','primary_images','all_images','is_liked']
 
-        
-        
 
+#Token Authentication orqali Login, Register , Logout
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email',)
+
+
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email', 'password')
+        extra_kwargs = {'password': {'<write only true>': True}}
+
+    def create(self, validated_data):
+        user = User.objects.create_user(validated_data['username'], validated_data['email'],
+                                        validated_data['password'])
+        return user
+
+
+class UserModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['username', 'password']
+
+    def create(self, validated_data):
+        user = User.objects.create_user(validated_data['username'])
+        # user = User.objects.create_superuser(validated_data['username'])
+        user.set_password(validated_data['password'])
+        user.save()
+        return user
+
+class LoginSerializer(serializers.Serializer):
+       username = serializers.CharField(required=True)
+       password = serializers.CharField(required=True)
+       
+
+class LogoutSerializer(serializers.Serializer):
+    pass
+  
 
 
         

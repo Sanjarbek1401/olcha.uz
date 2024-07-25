@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'olcha',
     'rest_framework',
+    'knox'
 ]
 
 MIDDLEWARE = [
@@ -130,9 +131,14 @@ MEDIA_ROOT = os.path.join(BASE_DIR / 'media')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
-    # Use Django's standard `django.contrib.auth` permissions,
-    # or allow read-only access for unauthenticated users.
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny'
-    ]
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
 }
+
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST_USER = 'sanjarbahodirov9901@gmail.com'
+EMAIL_HOST_PASSWORD = 'rchp qqxc mstw oeuk'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
