@@ -19,12 +19,16 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from knox.models import AuthToken
-
+from rest_framework.authentication import BasicAuthentication,SessionAuthentication,TokenAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 
 #For Category
 
 class CategoryListView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes=[JWTAuthentication]
+    
     def get(self, request):
         categories = Category.objects.all()
         serializers = CategoryModelSerializer(categories, many=True, context = {'request':request})
@@ -94,6 +98,7 @@ class ProductListApiView(APIView):
 
 class CategoryList(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
+    authentication_classes=[JWTAuthentication]
     model = Category
     serializer_class = CategoryModelSerializer
 
@@ -244,7 +249,7 @@ class GroupDetailView(APIView):
  
 
  """
-<<<<<<< HEAD
+
 # Login,registr, logout 
 class RegisterAPI(generics.GenericAPIView):
     serializer_class = RegisterSerializer
@@ -284,5 +289,4 @@ class LogoutView(generics.GenericAPIView):
        def post(self, request, *args, **kwargs):
            request.auth.delete()  
            return Response({'message': 'Successfully logged out.'}, status=status.HTTP_200_OK)
-=======
->>>>>>> 5eca925e7df358083036ad396d306ccd2ca0f28e
+

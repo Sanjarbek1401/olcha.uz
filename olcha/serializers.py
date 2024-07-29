@@ -132,6 +132,19 @@ class ProductSerializer(serializers.ModelSerializer):
 
 #Token Authentication orqali Login, Register , Logout
 
+class UserLoginSerializer(serializers.ModelSerializer):
+    id = serializers.PrimaryKeyRelatedField(read_only = True)
+    username = serializers.CharField(read_only = True)
+    password = serializers.CharField(write_only = True)
+    
+    class Meta:
+        model = User
+        fields = ['id','username','password']
+
+
+
+
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -159,7 +172,6 @@ class UserModelSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = User.objects.create_user(validated_data['username'])
-        # user = User.objects.create_superuser(validated_data['username'])
         user.set_password(validated_data['password'])
         user.save()
         return user
